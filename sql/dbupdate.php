@@ -740,36 +740,34 @@ if ($db->tableExists('xqcas_configuration'))
 ?>
 <#36>
 <?php
-//UzK:
-//This step is used only in the UzK branch
+//UzK only step
+?>
+<#37>
+<?php
 global $DIC;
 $db = $DIC->database();
-//Default Option for feedback styles
+//Create feedback styles
 if ($db->tableExists('xqcas_configuration'))
 {
-	//Predefined Feedback styles from Köln
+    //Feedback style 1 will be used as default, in case feedback_default is chosen, the value in true/false_feedback_format will be 1, and no specific style will be used, but platform style
+	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_default"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
+	//Specific feedback formats.
 	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_node_right"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
 	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_node_wrong"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
+	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_node_partially"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
 	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_solution_hint"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
 	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_extra_info"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
 	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_plot_feedback"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
-
-	//Extra feedback styles
-	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_extra_1"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
-	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_extra_2"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
-	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_extra_3"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
-	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_extra_4"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
-	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_extra_5"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
 }
-
-//Add stepwise feedback
-$stepwise_feedback = array('type' => 'text', 'length' => 8, "default" => "0");
-if ($db->tableExists('xqcas_options'))
+?>
+<#38>
+<?php
+global $DIC;
+$db = $DIC->database();
+//Create feedback styles
+if ($db->tableExists('xqcas_configuration'))
 {
-	if (!$db->tableColumnExists("xqcas_options", "stepwise_feedback"))
-	{
-		$db->addTableColumn("xqcas_options", "stepwise_feedback", $stepwise_feedback);
-	}
+    //We have to store the id of the content style we want to use for stack feedback styles
+	$db->insert("xqcas_configuration", array('parameter_name' => array('text', "feedback_stylesheet_id"), 'value' => array('clob', ''), 'group_name' => array('text', 'feedback')));
 }
-//UzK.
 ?>

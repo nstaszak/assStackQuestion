@@ -438,10 +438,11 @@ class assStackQuestionStackQuestion
 						$teacher_answer = $this->getSession()->get_value_key($key);
 					}
 				}
-				$input_parameters = array('type' => $input->getInputType(), 'name' => $input_name, 'teacheranswer' => $teacher_answer, 'options' => $this->getOptions(), 'parameters' => $specific_parameters);				$stack_inputs[$input_name] = $this->getStackFactory()->get("input_object", $input_parameters);
+				$input_parameters = array('type' => $input->getInputType(), 'name' => $input_name, 'teacheranswer' => $teacher_answer, 'options' => $this->getOptions(), 'parameters' => $specific_parameters);
+				$stack_inputs[$input_name] = $this->getStackFactory()->get("input_object", $input_parameters);
 
 			}
-			if (sizeof($stack_inputs))
+			if (!empty($stack_inputs))
 			{
 				$this->setInputs($stack_inputs);
 			}
@@ -468,10 +469,7 @@ class assStackQuestionStackQuestion
 				$response[$name] = $teacher_answer_casstring;
 			}
 		}
-		$session = $this->getSession();
-		$session->add_vars($response);
-		$session->instantiate();
-		$this->setSession($session);
+		$this->getSession()->add_vars($response);
 	}
 
 	/**

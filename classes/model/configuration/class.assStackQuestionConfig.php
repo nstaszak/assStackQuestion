@@ -15,6 +15,12 @@
  */
 class assStackQuestionConfig
 {
+	/** @var assStackQuestionServer */
+	protected static $server;
+
+	/** @var array */
+	protected $settings;
+
 
 	public function __construct($plugin_object = "")
 	{
@@ -24,6 +30,22 @@ class assStackQuestionConfig
 	/*
 	 * GET SETTINGS FROM DATABASE
 	 */
+
+
+	/**
+	 * Get a configuration setting
+	 * @param $name
+	 * @return mixed
+	 */
+	public function get($name)
+	{
+		if (!isset($this->settings))
+		{
+			$this->settings = self::_getStoredSettings('all');
+		}
+
+		return $this->settings[$name];
+	}
 
 	/**
 	 * This class can be called from anywhere to get configuration
@@ -50,6 +72,69 @@ class assStackQuestionConfig
 
 		return $settings;
 	}
+
+
+	/**
+	 * Read the server configuration from a configuration array
+	 * This avoids a second reading
+	 * @param $config
+	 */
+	public static function _readServers($config)
+	{
+		require_once(__DIR__ . '/class.assStackQuestionServer.php');
+		assStackQuestionServer::readServersFromConfig($config);
+	}
+
+
+	/**
+	 * Get the maxima server address for the current request
+	 * The chosen server is cached for the request
+	 *
+	 * @return string
+	 */
+	public static function _getServerAddress()
+	{
+		require_once(__DIR__ . '/class.assStackQuestionServer.php');
+
+		if (isset(self::$server))
+		{
+			return self::$server->getAddress();
+		}
+
+		if (!empty($_REQUEST['server_id']))
+		{
+			self::$server = assStackQuestionServer::getServerById($_REQUEST['server_id']);
+
+			return self::$server->getAddress();
+
+		}
+
+		switch (strtolower($_GET['cmdClass']))
+		{
+			case 'iltestplayerfixedquestionsetgui':
+			case 'iltestplayerrandomquestionsetgui':
+			case 'iltestplayerdynamicquestionsetgui':
+				$purpose = assStackQuestionServer::PURPOSE_RUN;
+				break;
+
+			default:
+				switch (basename($_SERVER['SCRIPT_FILENAME']))
+				{
+					case 'validation.php':
+					case 'instant_validiation.php':
+						$purpose = assStackQuestionServer::PURPOSE_RUN;
+						break;
+					default:
+						$purpose = assStackQuestionServer::PURPOSE_EDIT;
+				}
+		}
+
+
+		self::$server = assStackQuestionServer::getServerForPurpose($purpose);
+
+		return self::$server->getAddress();
+	}
+
 
 	/*
 	 * SAVE SETTINGS TO DATABASE
@@ -235,6 +320,42 @@ class assStackQuestionConfig
 		return TRUE;
 	}
 
+	public function saveFeedbackStyleSettings()
+	{
+		//Old settings
+		$saved_feedback_data = self::_getStoredSettings('feedback');
+		//New settings
+		$new_feedback_data = $this->getAdminInput();
+
+		//Check if Content Style has changed, if changed set pther fields to 0, otherwise, save it with new values
+		if ($saved_feedback_data["feedback_stylesheet_id"] != $new_feedback_data["feedback_stylesheet_id"])
+		{
+			//Save to DB
+			foreach ($saved_feedback_data as $parameter_name => $saved_value)
+			{
+				if ($parameter_name != "feedback_stylesheet_id")
+				{
+					$this->saveToDB($parameter_name, "0", 'feedback');
+				} else
+				{
+					$this->saveToDB($parameter_name, $new_feedback_data[$parameter_name], 'feedback');
+				}
+			}
+		} else
+		{
+			//Save to DB modified dat
+			foreach ($saved_feedback_data as $paremeter_name => $saved_value)
+			{
+				if (array_key_exists($paremeter_name, $new_feedback_data) AND $saved_feedback_data[$paremeter_name] != $new_feedback_data[$paremeter_name])
+				{
+					$this->saveToDB($paremeter_name, $new_feedback_data[$paremeter_name], 'feedback');
+				}
+			}
+		}
+
+		return TRUE;
+	}
+
 	/**
 	 * Saves new default inputs settings to the DB
 	 */
@@ -307,38 +428,15 @@ class assStackQuestionConfig
 		return TRUE;
 	}
 
-	//UzK:
-	public function saveFeedbackStyleSettings()
-	{
-		//Old settings
-		$saved_feedback_data = self::_getStoredSettings('feedback');
-		//New settings
-		$new_feedback_data = $this->getAdminInput();
-
-		//Checkboxes workaround
-		if (!array_key_exists('prt_simplify', $new_feedback_data))
-		{
-			$new_feedback_data['prt_simplify'] = 1;
-		}
-		//Save to DB
-		foreach ($saved_feedback_data as $paremeter_name => $saved_value)
-		{
-			if (array_key_exists($paremeter_name, $new_feedback_data) AND $saved_feedback_data[$paremeter_name] != $new_feedback_data[$paremeter_name])
-			{
-				$this->saveToDB($paremeter_name, $new_feedback_data[$paremeter_name], 'feedback');
-			}
-		}
-
-		return TRUE;
-	}
-	//UzK.
-
 	/**
+	 * Save a configuration setting to the database
+	 * (needs to be public for assStackQuestionServer::saveServers)
+	 *
 	 * @param $parameter_name //Is the of the parameter to modify (this is the Primary Key in DB)
 	 * @param $value //Is the value of the parameter
 	 * @param $group_name //Is the selector for different categories of data
 	 */
-	private function saveToDB($parameter_name, $value, $group_name)
+	public function saveToDB($parameter_name, $value, $group_name)
 	{
 		global $DIC;
 		$db = $DIC->database();
@@ -354,7 +452,8 @@ class assStackQuestionConfig
 	 */
 	public function getAdminInput()
 	{
-		$data = ilUtil::stripSlashesRecursive($_POST);
+		//https://mantis.ilias.de/view.php?id=25290
+		$data = ilUtil::stripSlashesRecursive($_POST, FALSE);
 		//Clean array
 		unset($data['cmd']);
 

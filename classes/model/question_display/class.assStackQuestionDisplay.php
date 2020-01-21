@@ -175,11 +175,13 @@ class assStackQuestionDisplay
 		//In assStackQuestionDisplay the User response should be store with the "value" format for assStackQuestionUtils::_getUserResponse.
 		$student_answer = $this->getUserResponse($input_name, $in_test);
 		//Bug https://www.ilias.de/mantis/view.php?id=22129 about matrix syntax hint
-		if (!sizeof($student_answer) AND ($input->get_parameter('syntaxHint') != '') AND is_a($input, 'stack_matrix_input'))
-		{
+        if (is_array($student_answer)) {
+            if (!sizeof($student_answer) AND ($input->get_parameter('syntaxHint') != '') AND is_a($input, 'stack_matrix_input')) {
 			$student_answer = assStackQuestionUtils::_changeUserResponseStyle(array($input_name => $input->get_parameter('syntaxHint')), $this->getQuestion()->getQuestionId(), array($input_name => $input), 'reduced_to_value');
 			$student_answer = $student_answer["xqcas_input_" . $input_name . "_value"];
 		}
+        }
+
 
 		//Create input state
 		if ($in_test)
@@ -193,13 +195,16 @@ class assStackQuestionDisplay
 		if ($render_display)
 		{
 			//Solve problem with string input type
-			if (is_array($student_answer))
-			{
-				if ($student_answer[$input_name] == NULL)
-				{
-					return "";
-				}
-			}
+            if (is_array($student_answer)) {
+                if (get_class($input) == 'stack_matrix_input') {
+                    //https://mantis.ilias.de/view.php?id=25256
+                    return $state->contentsdisplayed;
+                } else {
+                    if ($student_answer[$input_name] == NULL) {
+                        return "";
+                    }
+                }
+            }
 
 			return $state->contentsdisplayed;
 		}
@@ -258,34 +263,31 @@ class assStackQuestionDisplay
 		}
 	}
 
-	/**
-	 * Replace Feedback placeholders by feedback in case it is needed
-	 * @param $prt
-	 * @param $prt_name
-	 * @param $in_test
-	 */
-	private function replacementForPRTPlaceholders($prt, $prt_name, $in_test)
-	{
-		$string = "";
-		if (sizeof($this->getInlineFeedback()))
-		{
-			//feedback
-			//UzK:
-			if (strlen($this->inline_feedback['prt'][$prt_name]['status']['message']))
-			{
-				//Generic feedback
-				$string .= $this->inline_feedback['prt'][$prt_name]['status']['message'];
+    /**
+     * Replace Feedback placeholders by feedback in case it is needed
+     * @param $prt
+     * @param $prt_name
+     * @param $in_test
+     */
+    private function replacementForPRTPlaceholders($prt, $prt_name, $in_test)
+    {
+        $string = "";
+        if (!empty($this->getInlineFeedback())) {
+            //feedback
+            //feedback
+            if (strlen($this->inline_feedback['prt'][$prt_name]['status']['message'])) {
+                //Generic feedback
+                $string .= $this->inline_feedback['prt'][$prt_name]['status']['message'];
+
 			}
-			//UzK.
-			//$string .= '<br>';
-			//Specific feedback
-			$string .= $this->inline_feedback['prt'][$prt_name]['feedback'];
+            //Specific feedback
+            $string .= $this->inline_feedback['prt'][$prt_name]['feedback'];
+            $string .= $this->inline_feedback['prt'][$prt_name]['errors'];
 			$string .= $this->inline_feedback['prt'][$prt_name]['errors'];
+        }
 
-		}
-
-		return $string;
-	}
+        return assStackQuestionUtils::_getFeedbackStyledText($string, "feedback_default");
+    }
 
 	/*
 	 * GETTERS AND SETTERS
@@ -482,11 +484,13 @@ class assStackQuestionDisplay
 		//In assStackQuestionDisplay the User response should be store with the "value" format for assStackQuestionUtils::_getUserResponse.
 		$student_answer = $this->getUserResponse($input_name, $in_test);
 		//Bug https://www.ilias.de/mantis/view.php?id=22129 about matrix syntax hint
-		if (!sizeof($student_answer) AND ($input->get_parameter('syntaxHint') != '') AND is_a($input, 'stack_matrix_input'))
-		{
+        if (is_array($student_answer)) {
+            if (!sizeof($student_answer) AND ($input->get_parameter('syntaxHint') != '') AND is_a($input, 'stack_matrix_input')) {
 			$student_answer = assStackQuestionUtils::_changeUserResponseStyle(array($input_name => $input->get_parameter('syntaxHint')), $this->getQuestion()->getQuestionId(), array($input_name => $input), 'reduced_to_value');
 			$student_answer = $student_answer["xqcas_input_" . $input_name . "_value"];
 		}
+        }
+
 
 		$input_state = $this->getQuestion()->getInputStates($input_name);
 		$input_size = (string)$input->get_parameter("boxWidth");
@@ -519,7 +523,12 @@ class assStackQuestionDisplay
 				for ($j = 0; $j < $matrix_input_columns; $j++)
 				{
 					$user_matrix .= "<td class='xqcas_matrix_validation'>";
-					$user_filled_input = '<code>' . $student_answer[$input_name][$input_name . "_sub_" . $i . "_" . $j] . '</code>';
+                    //https://mantis.ilias.de/view.php?id=25256
+                    if ($in_test) {
+                        $user_filled_input = '<code>' . $student_answer[$input_name][$input_name . "_sub_" . $i . "_" . $j] . '</code>';
+                    } else {
+                        $user_filled_input = '<code>' . $student_answer[$input_name . "_sub_" . $i . "_" . $j] . '</code>';
+                    }
 					$user_matrix .= $user_filled_input;
 					$user_matrix .= "</td>";
 				}
@@ -529,7 +538,9 @@ class assStackQuestionDisplay
 
 			$validation_message = stack_string('studentValidation_yourLastAnswer', $input_state->contentsdisplayed);
 
-			return "<table class='xqcas_validation'><tr><td class='xqcas_validation'>" . $user_matrix . $validation_message . "</td></tr></table>";
+#25225 add validation div wrapping
+            $validation_div = '<div id="validation_xqcas_' . $this->getQuestion()->getQuestionId() . '_' . $input_name . '"></div><div id="xqcas_input_matrix_width_' . $input_name . '" style="visibility: hidden">' . $input->width . '</div><div id="xqcas_input_matrix_height_' . $input_name . '" style="visibility: hidden";>' . $input->height . '</div>';
+            return $validation_div;
 		}
 		if (is_a($input, "stack_checkbox_input"))
 		{
@@ -567,19 +578,15 @@ class assStackQuestionDisplay
 
 			return "<table class='xqcas_validation'><tr><td class='xqcas_validation'>" . $feedback . "</td></tr></table>";
 
-		}
-		if (is_a($input, "stack_notes_input"))
-		{
-			$string = "";
-			$string .= '<div class="alert alert-warning" role="alert">';
-			$string .= $this->getPlugin()->txt("notes_best_solution_message");
-			$string .= '</div>';
-			$result["value"] = $string;
-			$result["display"] = "";
+        }
+        if (is_a($input, "stack_notes_input")) {
+            $string = assStackQuestionUtils::_getFeedbackStyledText($this->getPlugin()->txt("notes_best_solution_message"), "feedback_default");
+            $result["value"] = $string;
+            $result["display"] = "";
 
-			return $result;
-		}
-	}
+            return $result;
+        }
+    }
 
 	//UzK:
 	public function replacementForStepwisePlaceholders($prt, $prt_name, $in_test)

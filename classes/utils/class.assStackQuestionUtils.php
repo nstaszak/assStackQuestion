@@ -146,10 +146,12 @@ class assStackQuestionUtils
 		$current_response = array();
 		$user_response_from_db = array();
 
-		if(sizeof($previous_response)){
+		if (!empty($previous_response))
+		{
 			foreach ($previous_response["prt"] as $prt_name => $prt_info)
 			{
-				if(sizeof($prt_info["response"])){
+				if (!empty($prt_info["response"]))
+				{
 					foreach ($prt_info["response"] as $input_name => $input_info)
 					{
 						$user_response_from_db[$input_name] = $input_info["value"];
@@ -179,7 +181,7 @@ class assStackQuestionUtils
 		return $user_response;
 	}
 
-	 /**
+	/**
 	 * @param $user_response
 	 * @param $question_id
 	 * @param $inputs
@@ -300,7 +302,7 @@ class assStackQuestionUtils
 				foreach ($inputs as $input_name => $input)
 				{
 					//If input is not matrix
-					if (is_subclass_of($input,"stack_dropdown_input"))
+					if (is_subclass_of($input, "stack_dropdown_input"))
 					{
 						$new_user_response_array['xqcas_input_' . $input_name . '_value'] = $input->maxima_to_response_array($user_response[$input_name]);
 					} elseif (!is_a($input, 'stack_matrix_input'))
@@ -625,7 +627,7 @@ class assStackQuestionUtils
 		{
 			if ($format == "only_input_names")
 			{
-				$adapted_user_response[str_replace("xqcas_" . $question_id . "_", "", $input_name)] = $input_value;
+				$adapted_user_response[str_replace("xqcas_" . $question_id . "_", "", $input_name)] = ilUtil::stripScriptHTML($input_value);
 			}
 		}
 
@@ -641,4 +643,128 @@ class assStackQuestionUtils
 		return stack_maths::process_display_castext($castext);
 	}
 
+	/**
+	 * Returns the ID of each content styles available in the platform.
+	 */
+	public static function _getContentStylesAvailable()
+	{
+		global $DIC;
+		$db = $DIC->database();
+
+		$styles_id = array();
+		$query = "SELECT id FROM style_data WHERE active = '1'";
+		$result = $db->query($query);
+		while ($row = $db->fetchAssoc($result))
+		{
+			$styles_id[] = $row["id"];
+		}
+
+		return $styles_id;
+	}
+
+	/**
+	 * Returns a text with a format from the content style
+	 * @param $a_text
+	 * @param $a_format
+	 * @return string
+	 */
+	public static function _getFeedbackStyledText($a_text, $a_format)
+	{
+		require_once('./Customizing/global/plugins/Modules/TestQuestionPool/Questions/assStackQuestion/classes/model/configuration/class.assStackQuestionConfig.php');
+
+		//Get Styles assigned to Formats
+		$config_options = assStackQuestionConfig::_getStoredSettings("feedback");
+		require_once "./Services/Style/Content/classes/class.ilObjStyleSheet.php";
+
+		//Return text depending Format
+		if (strlen($a_text))
+		{
+			switch ($a_format)
+			{
+				case "feedback_default":
+					if ($config_options["feedback_default"] == "0")
+					{
+						return '<div class="alert alert-warning" role="alert">' . $a_text . '</div>';
+					} else
+					{
+						$style_assigned = $config_options[$a_format];
+
+						return '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">' . $a_text . '</div>';
+					}
+				default:
+					//Use specific feedback style
+					$style_assigned = $config_options[$a_format];
+
+					return '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">' . $a_text . '</div>';
+			}
+		} else
+		{
+			return $a_text;
+		}
+
+	}
+
+	public static function _getActiveContentStyleId()
+	{
+		global $DIC;
+		$db = $DIC->database();
+
+		$styles_id = array();
+		$query = "SELECT value FROM xqcas_configuration WHERE parameter_name = 'feedback_stylesheet_id'";
+		$result = $db->query($query);
+		while ($row = $db->fetchAssoc($result))
+		{
+			return $row["value"];
+		}
+	}
+
+	public static function _replaceFeedbackPlaceHolders($feedback){
+		require_once('./Customizing/global/plugins/Modules/TestQuestionPool/Questions/assStackQuestion/classes/model/configuration/class.assStackQuestionConfig.php');
+
+		//Get Styles assigned to Formats
+		$config_options = assStackQuestionConfig::_getStoredSettings("feedback");
+
+		$text = $feedback;
+		//Search for right feedback
+		$style_assigned = $config_options["feedback_node_right"];
+		$text = str_replace("[[feedback_node_right]]", '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">',$text);
+		$text = str_replace("[[feedback_node_right_close]]", '</div>',$text);
+
+		//Search for wrong feedback
+		$style_assigned = $config_options["feedback_node_wrong"];
+		$text = str_replace("[[feedback_node_wrong]]", '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">',$text);
+		$text = str_replace("[[feedback_node_wrong_close]]", '</div>',$text);
+
+		//Search for wrong feedback
+		$style_assigned = $config_options["feedback_solution_hint"];
+		$text = str_replace("[[feedback_solution_hint]]", '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">',$text);
+		$text = str_replace("[[feedback_solution_hint_close]]", '</div>',$text);
+
+		//Replace Extra info
+		$style_assigned = $config_options["feedback_extra_info"];
+		$text = str_replace("[[feedback_extra_info]]", '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">',$text);
+		$text = str_replace("[[feedback_extra_info_close]]", '</div>',$text);
+
+		//Replace Extra info
+		$style_assigned = $config_options["feedback_plot_feedback"];
+		$text = str_replace("[[feedback_plot_feedback]]", '<div class="ilc_text_block_' . $style_assigned . ' ilPositionStatic">',$text);
+		$text = str_replace("[[feedback_plot_feedback_close]]", '</div>',$text);
+
+		return $text;
+	}
+
+
+	public static function _isPhP72()
+	{
+		$php_version = phpversion();
+
+		$version = substr($php_version, 0, 3);
+		if ($version < 7.2)
+		{
+			return FALSE;
+		} else
+		{
+			return TRUE;
+		}
+	}
 }

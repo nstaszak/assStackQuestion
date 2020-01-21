@@ -16,10 +16,16 @@ require_once("./Services/Component/classes/class.ilPluginConfigGUI.php");
  */
 class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 {
+	/** @var assStackQuestionConfig */
+	protected $config;
+
+
+	/** @var ilassStackQuestionPlugin */
+	protected $plugin_object = null;
 
 	/**
 	 *
-	 * @param type $cmd
+	 * @param string $cmd
 	 */
 	public function performCommand($cmd)
 	{
@@ -34,6 +40,18 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		$cmd = $ctrl->getCmd($this, "configure");
 		switch ($cmd)
 		{
+			case 'configure';
+			case 'showConnectionSettings':
+			case 'saveConnectionSettings':
+			case 'showServerList':
+			case 'addServer':
+			case 'editServer':
+			case 'saveConnectionSettings':
+			case 'saveServerSettings':
+			case 'confirmDeleteServers':
+				$this->initTabs('show_connection_settings');
+				break;
+
 			case 'showOtherSettings':
 			case 'showDisplaySettings':
 			case 'showDefaultOptionsSettings':
@@ -47,48 +65,53 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 			case 'setDefaultSettingsForInputs':
 			case 'setDefaultSettingsForOptions':
 			case 'setDefaultSettingsForPRTs':
-				//UzK:
 			case 'showFeedbackStylesSettings':
 			case 'saveFeedbackStylesSettings':
 			case 'setFeedbackStylesSettings':
-				//UzK.
-				$this->initTabs('others');
-				$this->$cmd();
+				$this->initTabs('show_other_settings');
 				break;
 
-			default:
-				$this->initTabs();
-				$this->$cmd();
+			case 'showHealthcheck':
+			case 'runHealthcheck':
+				$this->initTabs('show_healthcheck');
 				break;
 		}
+
+		$this->$cmd();
 	}
 
 	/**
-	 * @param string $a_mode
+	 * Init the tabs
+	 * @param string $a_active id of the active tab (activates it an adds its sub tabs)
 	 */
-	public function initTabs($a_mode = "")
+	public function initTabs($a_active = "")
 	{
 		global $DIC;
 		$ctrl = $DIC->ctrl();
 		$tabs = $DIC->tabs();
-		switch ($a_mode)
+
+		$tabs->addTab("show_connection_settings", $this->plugin_object->txt('show_connection_settings'), $ctrl->getLinkTarget($this, 'showConnectionSettings'));
+		$tabs->addTab("show_other_settings", $this->plugin_object->txt('show_other_settings'), $ctrl->getLinkTarget($this, 'showOtherSettings'));
+		$tabs->addTab("show_healthcheck", $this->plugin_object->txt('show_healthcheck'), $ctrl->getLinkTarget($this, 'showHealthcheck'));
+
+		$tabs->activateTab($a_active);
+
+		switch ($a_active)
 		{
-			case 'others':
-				$tabs->addTab("show_connection_settings", $this->plugin_object->txt('show_connection_settings'), $ctrl->getLinkTarget($this, 'showConnectionSettings'));
-				$tabs->addTab("show_other_settings", $this->plugin_object->txt('show_other_settings'), $ctrl->getLinkTarget($this, 'showOtherSettings'));
+			case 'show_connection_settings':
+				$tabs->addSubTab('basic_connection_settings', $this->plugin_object->txt('basic_connection_settings'), $ctrl->getLinkTarget($this, 'showConnectionSettings'));
+				if ($this->config->get('platform_type') == 'server')
+				{
+					$tabs->addSubTab('server_configuration', $this->plugin_object->txt('server_configuration'), $ctrl->getLinkTarget($this, 'showServerList'));
+				}
+				break;
+
+			case 'show_other_settings':
 				$tabs->addSubTab('show_display_settings', $this->plugin_object->txt('show_display_settings'), $ctrl->getLinkTargetByClass('ilassStackQuestionConfigGUI', 'showDisplaySettings'));
 				$tabs->addSubTab('show_default_options_settings', $this->plugin_object->txt('show_default_options_settings'), $ctrl->getLinkTargetByClass('ilassStackQuestionConfigGUI', 'showDefaultOptionsSettings'));
 				$tabs->addSubTab('show_default_inputs_settings', $this->plugin_object->txt('show_default_inputs_settings'), $ctrl->getLinkTargetByClass('ilassStackQuestionConfigGUI', 'showDefaultInputsSettings'));
 				$tabs->addSubTab('show_default_prts_settings', $this->plugin_object->txt('show_default_prts_settings'), $ctrl->getLinkTargetByClass('ilassStackQuestionConfigGUI', 'showDefaultPRTsSettings'));
-				//UzK:
 				$tabs->addSubTab('show_feedback_styles_settings', $this->plugin_object->txt('feedback_styles_settings'), $ctrl->getLinkTargetByClass('ilassStackQuestionConfigGUI', 'showFeedbackStylesSettings'));
-				//Uzk.
-				$tabs->addTab("show_healthcheck", $this->plugin_object->txt('show_healthcheck'), $ctrl->getLinkTarget($this, 'showHealthcheck'));
-				break;
-			default:
-				$tabs->addTab("show_connection_settings", $this->plugin_object->txt('show_connection_settings'), $ctrl->getLinkTarget($this, 'showConnectionSettings'));
-				$tabs->addTab("show_other_settings", $this->plugin_object->txt('show_other_settings'), $ctrl->getLinkTarget($this, 'showOtherSettings'));
-				$tabs->addTab("show_healthcheck", $this->plugin_object->txt('show_healthcheck'), $ctrl->getLinkTarget($this, 'showHealthcheck'));
 				break;
 		}
 	}
@@ -110,18 +133,153 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 	{
 		global $DIC, $tpl;
 		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_connection_settings');
+		$tabs->activateSubTab('basic_connection_settings');
 
 		$form = $this->getConnectionSettingsForm();
 		$tpl->setContent($form->getHTML());
 	}
 
+	public function showServerList()
+	{
+		global $DIC, $tpl;
+		$DIC->tabs()->activateSubTab('server_configuration');
+
+		$button = ilLinkButton::getInstance();
+		$button->setCaption($this->plugin_object->txt('add_server'), false);
+		$button->setUrl($DIC->ctrl()->getLinkTarget($this, 'addServer'));
+		$DIC->toolbar()->addButtonInstance($button);
+
+		$this->plugin_object->includeClass('GUI/tables/class.assStackQuestionServerTableGUI.php');
+		$table = new assStackQuestionServerTableGUI($this, 'showServerList');
+		$tpl->setContent($table->getHTML());
+	}
+
+	public function addServer()
+	{
+		global $DIC, $tpl;
+		$tabs = $DIC->tabs();
+		$tabs->activateSubTab('server_configuration');
+
+		$form = $this->getServerSettingsForm();
+		$tpl->setContent($form->getHTML());
+	}
+
+	public function editServer()
+	{
+		global $DIC, $tpl;
+		$tabs = $DIC->tabs();
+		$tabs->activateSubTab('server_configuration');
+
+		$DIC->ctrl()->setParameter($this, 'server_id', $_GET['server_id']);
+		$button = ilLinkButton::getInstance();
+		$button->setCaption($this->plugin_object->txt('show_healthcheck'), false);
+		$button->setUrl($DIC->ctrl()->getLinkTarget($this, 'runHealthcheck'));
+		$DIC->toolbar()->addButtonInstance($button);
+
+		$form = $this->getServerSettingsForm($_GET['server_id']);
+		$tpl->setContent($form->getHTML());
+	}
+
+
+	public function activateServers()
+	{
+		$this->changeServerActivation(true);
+	}
+
+	public function deactivateServers()
+	{
+		$this->changeServerActivation(false);
+	}
+
+	protected function changeServerActivation($active)
+	{
+		global $DIC;
+
+		$this->plugin_object->includeClass("model/configuration/class.assStackQuestionServer.php");
+
+		if (isset($_POST['server_id']))
+		{
+			$server_ids = (array)$_POST['server_id'];
+		} elseif (isset($_GET['server_id']))
+		{
+			$server_ids = (array)$_GET['server_id'];
+		}
+
+		if (empty($server_ids))
+		{
+			ilUtil::sendFailure($this->plugin_object->txt('no_server_selected'), true);
+		} else
+		{
+			foreach ($server_ids as $server_id)
+			{
+				$server = assStackQuestionServer::getServerById($server_id);
+				$server->setActive($active);
+			}
+			assStackQuestionServer::saveServers();
+
+			if (count($server_ids) == 1)
+			{
+				ilUtil::sendSuccess($this->plugin_object->txt($active ? 'server_activated' : 'server_deactivated'), true);
+			} else
+			{
+				ilUtil::sendSuccess($this->plugin_object->txt($active ? 'servers_activated' : 'servers_deactivated'), true);
+			}
+		}
+		$DIC->ctrl()->redirect($this, 'showServerList');
+	}
+
+	public function confirmDeleteServers()
+	{
+		global $DIC, $tpl;
+
+		$this->plugin_object->includeClass("model/configuration/class.assStackQuestionServer.php");
+
+		if (isset($_POST['server_id']))
+		{
+			$server_ids = (array)$_POST['server_id'];
+		} elseif (isset($_GET['server_id']))
+		{
+			$server_ids = (array)$_GET['server_id'];
+		}
+
+		if (empty($server_ids))
+		{
+			ilUtil::sendFailure($this->plugin_object->txt('no_server_selected'), true);
+			$DIC->ctrl()->redirect($this, 'showServerList');
+		}
+
+		$gui = new ilConfirmationGUI();
+		$gui->setHeaderText($this->plugin_object->txt('confirm_delete_servers'));
+		$gui->setFormAction($DIC->ctrl()->getFormAction($this));
+		$gui->setConfirm($DIC->language()->txt('delete'), 'deleteServers');
+		$gui->setCancel($DIC->language()->txt('cancel'), 'showServerList');
+
+		foreach ($server_ids as $server_id)
+		{
+			$server = assStackQuestionServer::getServerById($server_id);
+			$gui->addItem('server_id[]', $server_id, $server->getAddress());
+		}
+		$tpl->setContent($gui->getHTML());
+	}
+
+	public function deleteServers()
+	{
+		global $DIC;
+		$this->plugin_object->includeClass("model/configuration/class.assStackQuestionServer.php");
+
+		$server_ids = (array)$_POST['server_id'];
+		assStackQuestionServer::deleteServers($server_ids);
+
+		ilUtil::sendSuccess($this->plugin_object->txt(count($server_ids) == 1 ? 'server_deleted' : 'servers_deleted'), true);
+		$DIC->ctrl()->redirect($this, 'showServerList');
+	}
+
+
 	public function showOtherSettings()
 	{
 		global $DIC;
 		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_other_settings');
-		$tabs->setSubTabActive('show_display_settings');
+		$tabs->activateSubTab('show_display_settings');
 
 		$this->showDisplaySettings();
 	}
@@ -130,8 +288,7 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 	{
 		global $DIC, $tpl;
 		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_other_settings');
-		$tabs->setSubTabActive('show_display_settings');
+		$tabs->activateSubTab('show_display_settings');
 
 		$form = $this->getDisplaySettingsForm();
 		$tpl->setContent($form->getHTML());
@@ -141,8 +298,7 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 	{
 		global $DIC, $tpl;
 		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_other_settings');
-		$tabs->setSubTabActive('show_default_options_settings');
+		$tabs->activateSubTab('show_default_options_settings');
 
 		$form = $this->getDefaultOptionsSettingsForm();
 		$tpl->setContent($form->getHTML());
@@ -152,8 +308,7 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 	{
 		global $DIC, $tpl;
 		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_other_settings');
-		$tabs->setSubTabActive('show_default_inputs_settings');
+		$tabs->activateSubTab('show_default_inputs_settings');
 
 		$form = $this->getDefaultInputsSettingsForm();
 		$tpl->setContent($form->getHTML());
@@ -163,14 +318,12 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 	{
 		global $DIC, $tpl;
 		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_other_settings');
-		$tabs->setSubTabActive('show_default_prts_settings');
+		$tabs->activateSubTab('show_default_prts_settings');
 
 		$form = $this->getDefaultPRTSettingsForm();
 		$tpl->setContent($form->getHTML());
 	}
 
-	//UzK:
 	public function showFeedbackStylesSettings()
 	{
 		global $DIC, $tpl;
@@ -181,40 +334,39 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		$form = $this->getFeedbackStylesSettingsForm();
 		$tpl->setContent($form->getHTML());
 	}
-	//UzK.
+
 
 	/**
 	 * Show the healthcheck screen
-	 * @param string $a_mode 'reduced', 'extended' or empty
+	 * @param bool $a_run run the healthcheck
 	 */
-	public function showHealthcheck($a_mode = "")
+	public function showHealthcheck($a_run = false)
 	{
 		global $DIC, $tpl;
-		$tabs = $DIC->tabs();
-		$tabs->setTabActive('show_healthcheck');
 
-		require_once("./Services/UIComponent/Toolbar/classes/class.ilToolbarGUI.php");
 		$toolbar = new ilToolbarGUI();
 		$ctrl = $DIC->ctrl();
+
+		$ctrl->saveParameter($this, 'server_id');
 		$toolbar->setFormAction($ctrl->getFormAction($this));
-		include_once('./Services/UIComponent/Button/classes/class.ilButton.php');
-		$healthcheck_reduced_button = ilButton::getInstance();
+
+		$healthcheck_reduced_button = ilSubmitButton::getInstance();
 		$healthcheck_reduced_button->setCaption($this->plugin_object->txt("healthcheck_reduced"), FALSE);
-		$healthcheck_reduced_button->setName("healthcheckReduced");
+		$healthcheck_reduced_button->setCommand("runHealthcheck");
 		$toolbar->addButtonInstance($healthcheck_reduced_button);
 
-		//$healthcheck_expanded_button = ilButton::getInstance();
-		//$healthcheck_expanded_button->setCaption($this->plugin_object->txt("healthcheck_expanded"), FALSE);
-		//$healthcheck_expanded_button->setName("healthcheckExpanded");
-		//$toolbar->addButtonInstance($healthcheck_expanded_button);
-
-		$clear_cache_button = ilButton::getInstance();
+		$clear_cache_button = ilSubmitButton::getInstance();
 		$clear_cache_button->setCaption($this->plugin_object->txt("clear_cache"), FALSE);
-		$clear_cache_button->setName("clearCache");
+		$clear_cache_button->setCommand("clearCache");
 		$toolbar->addButtonInstance($clear_cache_button);
 
-		if ($a_mode != "")
+		if ($a_run)
 		{
+			if ($this->config->get('platform_type') == 'server')
+			{
+				ilUtil::sendInfo($this->plugin_object->txt('srv_address') . ':<br/>' . assStackQuestionConfig::_getServerAddress());
+			}
+
 			//Create Healthcheck
 			$this->plugin_object->includeClass("model/configuration/class.assStackQuestionHealthcheck.php");
 			$healthcheck_object = new assStackQuestionHealthcheck($this->plugin_object);
@@ -233,12 +385,20 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 				//Show healthcheck
 				$this->plugin_object->includeClass("GUI/configuration/class.assStackQuestionHealthcheckGUI.php");
 				$healthcheck_gui_object = new assStackQuestionHealthcheckGUI($this->plugin_object, $healthcheck_data);
-				$healthcheck_gui = $healthcheck_gui_object->showHealthcheck($a_mode);
+				$healthcheck_gui = $healthcheck_gui_object->showHealthcheck();
 				$result_html = $healthcheck_gui->get();
 			}
 		}
 
 		$tpl->setContent($toolbar->getHTML() . $result_html);
+	}
+
+	/**
+	 * Run a healthcheck
+	 */
+	public function runHealthcheck()
+	{
+		$this->showHealthcheck(true);
 	}
 
 	/*
@@ -304,7 +464,7 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		$cas_result_caching->setValue('db');
 		$form->addItem($cas_result_caching);
 
-		if ($connection_data['platform_type'] == 'win' OR $connection_data['platform_type'] == 'server')
+		if ($connection_data['platform_type'] == 'win')
 		{
 
 			//Maxima command
@@ -312,7 +472,17 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 			$maxima_command->setInfo($this->plugin_object->txt('maxima_command_info'));
 			$maxima_command->setValue($connection_data['maxima_command']);
 			$form->addItem($maxima_command);
+		} elseif ($connection_data['platform_type'] == 'server')
+		{
+			$link = $DIC->ctrl()->getLinkTarget($this, 'showServerList');
+			$maxima_command = new ilNonEditableValueGUI($this->plugin_object->txt('maxima_command'), '');
+			$maxima_command->setValue($this->plugin_object->txt('maxima_command_server'));
+			$maxima_command->setInfo(sprintf($this->plugin_object->txt('maxima_command_server_info'), $link));
+			$form->addItem($maxima_command);
+		}
 
+		if ($connection_data['platform_type'] == 'win' OR $connection_data['platform_type'] == 'server')
+		{
 			//Plot command
 			$plot_command = new ilTextInputGUI($this->plugin_object->txt('plot_command'), 'plot_command');
 			$plot_command->setInfo($this->plugin_object->txt('plot_command_info'));
@@ -508,9 +678,17 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		$form->addItem($input_strict_syntax);
 
 		//Input insert stars
-		$input_insert_stars = new ilCheckboxInputGUI($this->plugin_object->txt('input_insert_stars'), 'input_insert_stars');
+		$input_insert_stars = new ilSelectInputGUI($this->plugin_object->txt('input_insert_stars'), 'input_insert_stars');
+        $input_insert_stars->setOptions(array(
+            "0" => $this->plugin_object->txt('input_stars_no_stars'),
+            "1" => $this->plugin_object->txt('input_stars_implied'),
+            "2" => $this->plugin_object->txt('input_stars_singlechar'),
+            "3" => $this->plugin_object->txt('input_stars_spaces'),
+            "4" => $this->plugin_object->txt('input_stars_implied_spaces'),
+            "5" => $this->plugin_object->txt('input_type_implied_spaces_single')));
+
 		$input_insert_stars->setInfo($this->plugin_object->txt("input_insert_stars_info"));
-		$input_insert_stars->setChecked($inputs_data['input_insert_stars']);
+		$input_insert_stars->setValue((int)$inputs_data['input_insert_stars']);
 		$form->addItem($input_insert_stars);
 
 		//Input forbid float
@@ -686,26 +864,102 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		return $form;
 	}
 
-	//UzK:
+	public function getServerSettingsForm($a_server_id = null)
+	{
+		global $DIC;
+		$ctrl = $DIC->ctrl();
+		$lng = $DIC->language();
+
+		$this->plugin_object->includeClass("model/configuration/class.assStackQuestionServer.php");
+
+		if (isset($a_server_id) && $a_server_id > 0)
+		{
+			$server = assStackQuestionServer::getServerById($a_server_id);
+			$title = $this->plugin_object->txt('edit_server');
+			$ctrl->setParameter($this, 'server_id', $a_server_id);
+		} else
+		{
+			$server = assStackQuestionServer::getDefaultServer();
+			$title = $this->plugin_object->txt('add_server');
+		}
+
+		$form = new ilPropertyFormGUI();
+		$form->setTitle($title);
+		$form->setFormAction($ctrl->getFormAction($this));
+
+		// purpose
+		$options = [];
+		foreach (assStackQuestionServer::getPurposes() as $purpose)
+		{
+			$options[$purpose] = $this->plugin_object->txt('srv_purpose_' . $purpose);
+		}
+		$purpose = new ilSelectInputGUI($this->plugin_object->txt('srv_purpose'), 'purpose');
+		$purpose->setInfo($this->plugin_object->txt('srv_purpose_info'));
+		$purpose->setRequired(true);
+		$purpose->setOptions($options);
+		$purpose->setValue($server->getPurpose());
+		$form->addItem($purpose);
+
+		$address = new ilTextInputGUI($this->plugin_object->txt('srv_address'), 'address');
+		$address->setInfo($this->plugin_object->txt('srv_address_info'));
+		$address->setRequired(true);
+		$address->setValue($server->getAddress());
+		$form->addItem($address);
+
+		$active = new ilCheckboxInputGUI($lng->txt('active'), 'active');
+		$active->setInfo($this->plugin_object->txt('srv_active_info'));
+		$active->setChecked($server->isActive());
+		$form->addItem($active);
+
+		$form->addCommandButton('saveServerSettings', $lng->txt('save'));
+		$form->addCommandButton('showServerList', $lng->txt('cancel'));
+
+		return $form;
+	}
+
 	public function getFeedbackStylesSettingsForm()
 	{
 		global $DIC;
+		$ctrl = $DIC->ctrl();
+		$db = $DIC->database();
+		$lng = $DIC->language();
+
 		require_once("./Services/Form/classes/class.ilPropertyFormGUI.php");
 		$form = new ilPropertyFormGUI();
-		$ctrl = $DIC->ctrl();
 		$form->setFormAction($ctrl->getFormAction($this));
 
 		//Values from DB
 		$feedback_data = assStackQuestionConfig::_getStoredSettings('feedback');
 
-		//Get all CSS class in feedback styles folder
-		$css_classes = array();
-		foreach (scandir('./Customizing/global/plugins/Modules/TestQuestionPool/Questions/assStackQuestion/templates/css/feedback_styles') as $ind => $value)
+		//Get all Styles available
+		$styles_array = array();
+		$styles_array["0"] = $lng->txt("default");
+
+		$stylesheet_active = $feedback_data["feedback_stylesheet_id"];
+
+		//Available standard styles
+		require_once "./Services/Style/Content/classes/class.ilObjStyleSheet.php";
+		$available_styles = ilObjStyleSheet::_getStandardStyles();
+		$available_styles[""] = $lng->txt("default");
+
+		//Feedback Stylesheet selection
+		$header = new ilFormSectionHeaderGUI();
+		$header->setTitle($this->plugin_object->txt("feedback_stylesheet_id"));
+		$form->addItem($header);
+
+		$feedback_stylesheet_id = new ilSelectInputGUI($this->plugin_object->txt('feedback_stylesheet_id'), 'feedback_stylesheet_id');
+		$feedback_stylesheet_id->setOptions($available_styles);
+		$feedback_stylesheet_id->setInfo($this->plugin_object->txt('feedback_stylesheet_id_info'));
+		$feedback_stylesheet_id->setValue($feedback_data['feedback_stylesheet_id']);
+		$form->addItem($feedback_stylesheet_id);
+
+		if (strlen($stylesheet_active))
 		{
-			$filename = './Customizing/global/plugins/Modules/TestQuestionPool/Questions/assStackQuestion/templates/css/feedback_styles/' . $value;
-			if (file_exists($filename) AND strpos($value, ".css"))
+			$query = "SELECT style_id, characteristic FROM style_char WHERE type = 'text_block' AND style_id = '" . $stylesheet_active . "' ";
+			$result = $db->query($query);
+			while ($row = $db->fetchAssoc($result))
 			{
-				$css_classes[$value] = $value;
+				$styles_array[$row["characteristic"]] = $row["characteristic"];
 			}
 		}
 
@@ -716,67 +970,63 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		 * QUESTION WHICH USES THIS STYLES AND THOSE WHICH NOT.
 		 */
 
+		//General Feedback Style
+		$header = new ilFormSectionHeaderGUI();
+		$header->setTitle($this->plugin_object->txt("feedback_default"));
+		$form->addItem($header);
+
+		//Feedback DEFAULT style ---> 1
+		$feedback_default = new ilSelectInputGUI($this->plugin_object->txt('feedback_default'), 'feedback_default');
+		$feedback_default->setOptions($styles_array);
+		$feedback_default->setInfo($this->plugin_object->txt('feedback_default_info'));
+		$feedback_default->setValue($feedback_data['feedback_default']);
+		$form->addItem($feedback_default);
+
+		//Nodes feedback
+		$header = new ilFormSectionHeaderGUI();
+		$header->setTitle($this->plugin_object->txt("nodes_feedback"));
+		$form->addItem($header);
+
 		//Feedback style for right responses ---> 2
 		$right_responses = new ilSelectInputGUI($this->plugin_object->txt('feedback_node_right'), 'feedback_node_right');
-		$right_responses->setOptions($css_classes);
+		$right_responses->setOptions($styles_array);
 		$right_responses->setInfo($this->plugin_object->txt('feedback_node_right_info'));
 		$right_responses->setValue($feedback_data['feedback_node_right']);
 		$form->addItem($right_responses);
 
 		//Feedback style for wrong responses ---> 3
 		$wrong_responses = new ilSelectInputGUI($this->plugin_object->txt('feedback_node_wrong'), 'feedback_node_wrong');
-		$wrong_responses->setOptions($css_classes);
+		$wrong_responses->setOptions($styles_array);
 		$wrong_responses->setInfo($this->plugin_object->txt('feedback_node_wrong_info'));
 		$wrong_responses->setValue($feedback_data['feedback_node_wrong']);
 		$form->addItem($wrong_responses);
 
 		//Feedback style for solution hint ---> 4
 		$solution_hint = new ilSelectInputGUI($this->plugin_object->txt('feedback_solution_hint'), 'feedback_solution_hint');
-		$solution_hint->setOptions($css_classes);
+		$solution_hint->setOptions($styles_array);
 		$solution_hint->setInfo($this->plugin_object->txt('feedback_solution_hint_info'));
 		$solution_hint->setValue($feedback_data['feedback_solution_hint']);
 		$form->addItem($solution_hint);
 
 		//Feedback style for Extra Information ---> 5
 		$extra_info = new ilSelectInputGUI($this->plugin_object->txt('feedback_extra_info'), 'feedback_extra_info');
-		$extra_info->setOptions($css_classes);
+		$extra_info->setOptions($styles_array);
 		$extra_info->setInfo($this->plugin_object->txt('feedback_extra_info_info'));
 		$extra_info->setValue($feedback_data['feedback_extra_info']);
 		$form->addItem($extra_info);
 
 		//Feedback style for Plot ---> 6
 		$plot_feedback = new ilSelectInputGUI($this->plugin_object->txt('feedback_plot_feedback'), 'feedback_plot_feedback');
-		$plot_feedback->setOptions($css_classes);
+		$plot_feedback->setOptions($styles_array);
 		$plot_feedback->setInfo($this->plugin_object->txt('feedback_plot_feedback_info'));
 		$plot_feedback->setValue($feedback_data['feedback_plot_feedback']);
 		$form->addItem($plot_feedback);
 
-		//Feedback style for partial ---> 7
-		$partial_feedback = new ilSelectInputGUI($this->plugin_object->txt('feedback_extra_1'), 'feedback_extra_1');
-		$partial_feedback->setOptions($css_classes);
-		$partial_feedback->setInfo($this->plugin_object->txt('feedback_partial_feedback_info'));
-		$partial_feedback->setValue($feedback_data['feedback_extra_1']);
-		$form->addItem($partial_feedback);
-
-		$form->setTitle($this->plugin_object->txt('feedback_styles_settings'));
 		$form->addCommandButton("saveFeedbackStylesSettings", $this->plugin_object->txt("save"));
 		$form->addCommandButton("showFeedbackStylesSettings", $this->plugin_object->txt("cancel"));
 
 		return $form;
 	}
-
-	//UzK.
-
-	public function healthcheckReduced()
-	{
-		$this->showHealthcheck("reduced");
-	}
-
-	public function healthcheckExpanded()
-	{
-		$this->showHealthcheck("expanded");
-	}
-
 
 	public function clearCache()
 	{
@@ -869,7 +1119,33 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		$this->showDefaultPRTsSettings();
 	}
 
-	//UzK:
+	public function saveServerSettings()
+	{
+		global $DIC, $tpl;
+		$form = $this->getServerSettingsForm($_GET['server_id']);
+		if ($form->checkInput())
+		{
+			if (isset($_GET['server_id']))
+			{
+				$server = assStackQuestionServer::getServerById($_GET['server_id']);
+			} else
+			{
+				$server = assStackQuestionServer::getDefaultServer();
+			}
+			$server->setPurpose($form->getInput('purpose'));
+			$server->setAddress($form->getInput('address'));
+			$server->setActive($form->getInput('active'));
+			$server->save();
+
+			ilUtil::sendSuccess($this->plugin_object->txt('server_saved'), true);
+			$DIC->ctrl()->redirect($this, 'showServerList');
+		} else
+		{
+			$form->setValuesByPost();
+			$tpl->setContent($form->getHTML());
+		}
+	}
+
 	public function saveFeedbackStylesSettings()
 	{
 		$ok = $this->config->saveFeedbackStyleSettings();
@@ -882,7 +1158,7 @@ class ilassStackQuestionConfigGUI extends ilPluginConfigGUI
 		}
 		$this->showFeedbackStylesSettings();
 	}
-	//Uzk.
+
 
 	/*
 	 * SET DEFAULT VALUES METHODS
