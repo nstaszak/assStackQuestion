@@ -389,10 +389,10 @@ class assStackQuestionAuthoringGUI
 			$options_sqrt_sign->setChecked((int)$this->default["options_sqrt_sign"]);
 			$options_complex_numbers->setValue($this->default["options_complex_numbers"]);
 			$options_inverse_trigonometric->setValue($this->default["options_inverse_trigonometric"]);
+			$options_matrix_parens->setValue($this->default["options_matrix_parens"]);
 			//UzK:
 			$stepwise_feedback->setChecked((int)"0");
 			//UzK.
-			$options_matrix_parens->setValue($this->default["options_matrix_parens"]);
 		} else
 		{
 			$options_question_simplify->setChecked($options->getQuestionSimplify());
@@ -466,7 +466,7 @@ class assStackQuestionAuthoringGUI
             "4" => $this->getPlugin()->txt('input_stars_implied_spaces'),
             "5" => $this->getPlugin()->txt('input_type_implied_spaces_single')));
 
-        $input_insert_stars->setInfo($this->getPlugin()->txt("input_insert_stars_info"));
+		$input_insert_stars->setInfo($this->getPlugin()->txt("input_insert_stars_info"));
 
 		$input_syntax_hint = new ilTextInputGUI($this->getPlugin()->txt('input_syntax_hint'), $input->getInputName() . '_input_syntax_hint');
 		$input_syntax_hint->setInfo($this->getPlugin()->txt('input_syntax_hint_info'));
@@ -633,7 +633,6 @@ class assStackQuestionAuthoringGUI
 			$copy_prt->setCommand('save');
 			$settings_column->addFormProperty($copy_prt);
 		}
-
 
 		$settings_column->addFormProperty($this->getSettingsPart($prt, 12));
 		//Add node pos neg part

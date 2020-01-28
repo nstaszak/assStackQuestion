@@ -20,11 +20,17 @@ require_once './Customizing/global/plugins/Modules/TestQuestionPool/Questions/as
  */
 class assStackQuestionHealthcheck
 {
+
 	/**
 	 * Plugin instance for templates and language management
 	 * @var ilassStackQuestionPlugin
 	 */
 	private $plugin;
+
+	/**
+	 * @var mixed configuration settings stored in DB
+	 */
+	private $config;
 
 	/**
 	 * @var assStackQuestionStackFactory the clas for create stack objects
@@ -42,11 +48,14 @@ class assStackQuestionHealthcheck
 		//Set plugin object
 		$this->setPlugin($plugin);
 
+		//Set configuration settings from DB
+		$this->setConfig(assStackQuestionConfig::_getStoredSettings('all'));
+
 		//Create STACK factory
 		$this->setStackFactory(new assStackQuestionStackFactory());
 	}
 
-	public function doHealthcheck()
+	public function doHealthcheck($a_mode = 'reduced')
 	{
 		global $tpl;
 		//Include all classes needed
@@ -80,14 +89,13 @@ class assStackQuestionHealthcheck
 		//texdisplaystyle
 		$this->setMaximaConnectionStatus(html_writer::tag('p', stack_string('texdisplaystyle')), 'texdisplaystyle');
 		//healthchecksampledisplaytex
-		$this->setMaximaConnectionStatus(html_writer::tag('p', assStackQuestionUtils::_solveKeyBracketsBug(stack_string('healthchecksampledisplaytex'))), 'healthchecksampledisplaytex');
+		$this->setMaximaConnectionStatus(html_writer::tag('p', stack_string('healthchecksampledisplaytex')), 'healthchecksampledisplaytex');
 		//texinlinestyle
 		$this->setMaximaConnectionStatus(html_writer::tag('p', stack_string('texinlinestyle')), 'texinlinestyle');
 		//healthchecksampleinlinetex
 		$this->setMaximaConnectionStatus(html_writer::tag('p', assStackQuestionUtils::_solveKeyBracketsBug(stack_string('healthchecksampleinlinetex'))), 'healthchecksampleinlinetex');
 		//healthchecklatexmathjax
 		$this->setMaximaConnectionStatus(html_writer::tag('p', stack_string('healthchecklatexmathjax')), 'healthchecklatexmathjax');
-
 
 		//Maxima configuration file
 		// Try to list available versions of Maxima (linux only, without the DB).
@@ -208,6 +216,27 @@ class assStackQuestionHealthcheck
 		return $this->plugin;
 	}
 
+	/**
+	 * @param mixed $config
+	 */
+	public function setConfig($config)
+	{
+		$this->config = $config;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function getConfig($selector = '')
+	{
+		if ($selector)
+		{
+			return $this->config[$selector];
+		} else
+		{
+			return $this->config;
+		}
+	}
 
 	/**
 	 * @param \assStackQuestionStackFactory $stack_factory
