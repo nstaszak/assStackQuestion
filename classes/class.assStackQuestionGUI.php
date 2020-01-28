@@ -587,10 +587,10 @@ class assStackQuestionGUI extends assQuestionGUI
 
 		$value_format_user_response = assStackQuestionUtils::_getUserResponse($this->object->getId(), $this->object->getStackQuestion()->getInputs(), $feedback_data);
 		$question_display_object = new assStackQuestionDisplay($this->plugin, $this->object->getStackQuestion(), $value_format_user_response, $feedback_data);
-		$question_display_data = $question_display_object->getQuestionDisplayData(TRUE);
+		$question_display_data = $question_display_object->getQuestionDisplayData(TRUE, $this->object->getOptions()->getStepwiseFeedback());
 		//Get question display GUI
 		$question_display_gui_object = new assStackQuestionDisplayGUI($this->plugin, $question_display_data);
-		$question_display_gui = $question_display_gui_object->getQuestionDisplayGUI($show_specific_inline_feedback);
+		$question_display_gui = $question_display_gui_object->getQuestionDisplayGUI($show_specific_inline_feedback, $this->object->getOptions()->getStepwiseFeedback());
 		//fill question container with HTML from assStackQuestionDisplay
 		$container_tpl = $this->plugin->getTemplate("tpl.il_as_qpl_xqcas_question_container.html");
 		$container_tpl->setVariable('QUESTION', $question_display_gui->get());
