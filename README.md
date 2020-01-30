@@ -98,6 +98,12 @@ PLEASE BACKUP YOUR DATABASE before you run the update from an older version. Dep
 The translation is also done when importing questions from ILIAS or MoodleXML, but please notice that this conversion is one way.You can import "old CASText behaviour" questions to a platform with STACK plugin version 3.0+.
 But if you import "new CASText behaviour" questions to a platform with a previous version of the plugin, your question will not be properly shown on that platform.
 
+
+Version 3.0.29 (2020-01-30) for ILIAS 5.4
+----------------------------------------
+This runs only in ILIAS 5.4+ platforms.
+Solved a bug that prevented points to be properly calculated in preview mode when more than one PRT is present in a question.
+
 Version 3.0.27 (2020-01-28) for ILIAS 5.3- UzK Branch
 ----------------------------------------
 This version adapts UzK branch Feedback Styles management to the master branch Feedback Styles, use content and styles from ILIAS instead of local CSS files.

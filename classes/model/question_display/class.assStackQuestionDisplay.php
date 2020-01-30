@@ -161,6 +161,7 @@ class assStackQuestionDisplay
 			//UzK.
 		}
 
+        $display_data["reached_points"] = $this->getQuestion()->reached_points;
 		return $display_data;
 	}
 

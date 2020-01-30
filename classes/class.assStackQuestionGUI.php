@@ -433,8 +433,10 @@ class assStackQuestionGUI extends assQuestionGUI
 
 		$tabs = $DIC->tabs();
 		//Get solutions if given
-		$solutions = is_object($this->getPreviewSession()) ? (array)$this->getPreviewSession()->getParticipantsSolution() : array();
-
+        $solutions = is_object($this->getPreviewSession()) ? (array)$this->getPreviewSession()->getParticipantsSolution() : array();
+        if (is_object($this->getPreviewSession())) {
+            $solutions = (array)$this->getPreviewSession()->getParticipantsSolution();
+        }
 		//Include preview classes and set tab
 		$this->plugin->includeClass("model/question_display/class.assStackQuestionPreview.php");
 		$this->plugin->includeClass("GUI/question_display/class.assStackQuestionPreviewGUI.php");
@@ -467,6 +469,9 @@ class assStackQuestionGUI extends assQuestionGUI
 		//Get question preview data
 		$question_preview_object = new assStackQuestionPreview($this->plugin, $this->object, $seed, $solutions);
 		$question_preview_data = $question_preview_object->getQuestionPreviewData();
+
+        $this->getPreviewSession()->setParticipantsSolution($question_preview_data);
+        //$this->object->setPoints($question_preview_data["question_display"]["reached_points"]);
 
 		//Get question preview GUI
 		$question_preview_gui_object = new assStackQuestionPreviewGUI($this->plugin, $question_preview_data);
@@ -876,10 +881,10 @@ class assStackQuestionGUI extends assQuestionGUI
 	 * @return string HTML Code with the answer specific feedback
 	 * @see assStackQuestion::getSolutionValues()
 	 **/
-	public function getSpecificFeedbackOutput($active_id, $pass)
+	public function getSpecificFeedbackOutput($userSolution)
 	{
 		//We cannot use $userSolution, we need to get active id and pass to get the
-//Check for PASS
+        //Check for PASS
 
 		$active_id = $this->active_id;
 		$pass = $this->pass;
