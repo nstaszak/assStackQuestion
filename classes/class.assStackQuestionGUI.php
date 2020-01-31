@@ -433,7 +433,6 @@ class assStackQuestionGUI extends assQuestionGUI
 
 		$tabs = $DIC->tabs();
 		//Get solutions if given
-        $solutions = is_object($this->getPreviewSession()) ? (array)$this->getPreviewSession()->getParticipantsSolution() : array();
         if (is_object($this->getPreviewSession())) {
             $solutions = (array)$this->getPreviewSession()->getParticipantsSolution();
         }
@@ -470,10 +469,13 @@ class assStackQuestionGUI extends assQuestionGUI
 		$question_preview_object = new assStackQuestionPreview($this->plugin, $this->object, $seed, $solutions);
 		$question_preview_data = $question_preview_object->getQuestionPreviewData();
 
-        $this->getPreviewSession()->setParticipantsSolution($question_preview_data);
-        //$this->object->setPoints($question_preview_data["question_display"]["reached_points"]);
 
-		//Get question preview GUI
+        if(is_a($this->getPreviewSession(),"ilAssQuestionPreviewSession")){
+            $this->getPreviewSession()->setParticipantsSolution($question_preview_data);
+            //$this->object->setPoints($question_preview_data["question_display"]["reached_points"]);
+        }
+
+        //Get question preview GUI
 		$question_preview_gui_object = new assStackQuestionPreviewGUI($this->plugin, $question_preview_data);
 		$question_preview_gui = $question_preview_gui_object->getQuestionPreviewGUI();
 
@@ -884,7 +886,7 @@ class assStackQuestionGUI extends assQuestionGUI
 	public function getSpecificFeedbackOutput($userSolution)
 	{
 		//We cannot use $userSolution, we need to get active id and pass to get the
-        //Check for PASS
+//Check for PASS
 
 		$active_id = $this->active_id;
 		$pass = $this->pass;
