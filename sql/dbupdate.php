@@ -843,3 +843,19 @@ if ($db->tableExists('xqcas_configuration'))
     }
 }
 ?>
+<#39>
+<?php
+global $DIC;
+$db = $DIC->database();
+if (!$db->tableExists('xqcas_test_parameters'))
+{
+	$fields = array(
+	    'active_id' => array('type' => 'integer', 'length' => 8, 'notnull' => true),
+		'pass' => array('type' => 'integer', 'length' => 8, 'notnull' => true),
+		'question_id' => array('type' => 'integer', 'length' => 8, 'notnull' => true),
+        'tstamp' => array('type' => 'integer', 'length' => 8, 'notnull' => true),
+        'value' => array('type' => 'text', 'length' => 255, 'notnull' => true));
+	$db->createTable("xqcas_test_parameters", $fields);
+	$db->addPrimaryKey("xqcas_test_parameters", array("active_id", "pass", "question_id", "tstamp"));
+}
+?>

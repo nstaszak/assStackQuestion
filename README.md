@@ -1,4 +1,4 @@
-Copyright 2017 Institut fuer Lern-Innovation,Friedrich-Alexander-Universitaet Erlangen-Nuernberg, GPLv3 or later, see LICENSE
+Copyright 2021 Institut fuer Lern-Innovation,Friedrich-Alexander-Universitaet Erlangen-Nuernberg, GPLv3 or later, see LICENSE
 
 Includes a modified core part of STACK version 3.3
 Copyright 2012 University of Birmingham
@@ -89,32 +89,7 @@ Version History
 * The stable version 2.4.x for **ILIAS 5.2 to 5.3** is found in the GitHub branch **master-ilias52**
 * The stable version 2.3.x for **ILIAS 5.0 to 5.1** is found in the GitHub branch **master**
 
-Version 3.2.0 (2020-06-18) for ILIAS 6
+SCRIPT VERSION 3.3.6 (2021-06-15) for ILIAS 6
 ----------------------------------------
-This version includes the STACK core 4.2.2, this STACK version requires a Maxima Version =>5.41, if your installation runs this plugin with a Maxima Pool, the Maxima Pool must include the stack core required files of STACK version 2019090200. 
-
-Version 3.2.1 (2020-06-22) for ILIAS 6
-----------------------------------------
-The following known issues has been **solved**:
-- Textarea questions are not evaluated properly, this will be solved in a bugfix in a few days.
-- firstline extra option is not evaluated properly in equivalence reasoning questions.
-
-Version 3.2.2 (2020-06-25) for ILIAS 6
-----------------------------------------
-The following bugs have been solved:
-- 28533 for ILIAS6 only, Test import not working.
-- 25256 and 27830 and 24273 about Matrix validation.
-- 24199 about dropdown field dissapearing if answered but other prt related inputs are not answered.
-- 27560 about inputs not properly deleted.
-- 25256 about specific feedback not shown in test results.
-
-Version 3.3.2 (2020-11-13) for ILIAS 6
-----------------------------------------
-The following bugs have been solved:
-- 25938 firstline option not appearing the first line of the teacher answer as hint in equivalence reasoning inputs.
-- 24273 In test results, user solutions for Matrix inputs now appears like the rest of the inputs and not as LaTeX entry.
-
-Version 3.3.3 (2021-02-04) for ILIAS 6
-----------------------------------------
-The following bugs have been solved:
-- Solved Integrity Constraint Error while re-installing the plugin in ILIAS6.
+Use this version only for Testing purposes.
+Contact jesus.copado@fau.de if you have any question.

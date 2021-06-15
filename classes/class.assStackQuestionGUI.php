@@ -557,6 +557,7 @@ class assStackQuestionGUI extends assQuestionGUI
     public function getTestQuestionOutput($solutions, $show_specific_inline_feedback)
     {
         global $tpl, $DIC;
+        $db = $DIC->database();
         //Create feedback output from feedback class
         $this->plugin->includeClass("GUI/question_display/class.assStackQuestionFeedbackGUI.php");
         $question_feedback_object = new assStackQuestionFeedbackGUI($this->plugin, $solutions);
@@ -572,6 +573,20 @@ class assStackQuestionGUI extends assQuestionGUI
             require_once "./Services/Style/Content/classes/class.ilObjStyleSheet.php";
             $DIC->globalScreen()->layout()->meta()->addCss(ilObjStyleSheet::getContentStylePath((int)$style_id));
         }
+
+		/*FAU-SCRIPT*/
+		$active_id = $_GET['active_id'];
+		include_once "./Modules/Test/classes/class.ilObjTest.php";
+		$pass = ilObjTest::_getPass($active_id);
+
+		$db->insert("xqcas_test_parameters", array(
+			"active_id" => array("integer", $active_id),
+			"pass" => array("integer", $pass),
+			"question_id" => array("integer", $this->object->getId()),
+			"tstamp" => array("integer", time()),
+			"value" => array("clob", "#S# " . $this->object->getStackQuestion()->getQuestionNoteInstantiated())
+		));
+		/*FAU-SCRIPT*/
 
         $value_format_user_response = assStackQuestionUtils::_getUserResponse($this->object->getId(), $this->object->getStackQuestion()->getInputs(), $feedback_data);
         $question_display_object = new assStackQuestionDisplay($this->plugin, $this->object->getStackQuestion(), $value_format_user_response, $feedback_data);
