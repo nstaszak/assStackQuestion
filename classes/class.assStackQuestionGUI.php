@@ -551,7 +551,7 @@ class assStackQuestionGUI extends assQuestionGUI
 	 */
 	public function getTestQuestionOutput($solutions, $show_specific_inline_feedback)
 	{
-		global $tpl;
+		global $tpl, $DIC;
         $db = $DIC->database();
 		//Create feedback output from feedback class
 		$this->plugin->includeClass("GUI/question_display/class.assStackQuestionFeedbackGUI.php");
